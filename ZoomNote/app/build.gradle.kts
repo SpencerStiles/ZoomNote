@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.bounty.zoomnote"
+    namespace = "com.spencerstiles.zoomnote"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.bounty.zoomnote"
+        applicationId = "com.spencerstiles.zoomnote"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
