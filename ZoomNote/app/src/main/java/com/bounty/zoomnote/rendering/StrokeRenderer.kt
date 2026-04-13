@@ -17,9 +17,10 @@ class StrokeRenderer {
 
     private val path = Path()
 
-    fun draw(canvas: Canvas, stroke: Stroke, viewMatrix: ViewMatrix) {
+    fun draw(canvas: Canvas, stroke: Stroke, viewMatrix: ViewMatrix, alpha: Int = 255) {
         if (stroke.points.size < 2) return
         paint.color = stroke.color
+        paint.alpha = alpha
 
         for (i in 1 until stroke.points.size) {
             val prev = stroke.points[i - 1]
