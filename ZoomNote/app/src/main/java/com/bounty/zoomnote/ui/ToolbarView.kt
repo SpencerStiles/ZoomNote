@@ -3,14 +3,16 @@ package com.bounty.zoomnote.ui
 import android.content.Context
 import android.graphics.Color
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.Gravity
+import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.LinearLayout
 
 class ToolbarView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
-) : LinearLayout(context, attrs) {
+) : HorizontalScrollView(context, attrs) {
 
     var onColorSelected: ((Int) -> Unit)? = null
     var onThicknessSelected: ((Float) -> Unit)? = null
@@ -20,6 +22,7 @@ class ToolbarView @JvmOverloads constructor(
 
     private var isErasing = false
     private var selectedColorIndex = 0
+    private var selectedThicknessIndex = 1 // default: medium
 
     private val colors = intArrayOf(
         Color.BLACK,
@@ -37,21 +40,35 @@ class ToolbarView @JvmOverloads constructor(
     private val thicknessNames = arrayOf("Fine", "Medium", "Bold")
 
     private val colorButtons = mutableListOf<ImageButton>()
+    private val thicknessButtons = mutableListOf<ImageButton>()
+    private var eraserBtn: ImageButton? = null
+
+    private fun dpToPx(dp: Int): Int = TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), context.resources.displayMetrics
+    ).toInt()
 
     init {
-        orientation = HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        setPadding(16, 8, 16, 8)
-        setBackgroundColor(Color.argb(200, 240, 240, 240))
-        elevation = 8f
+        isHorizontalScrollBarEnabled = false
+        setBackgroundColor(Color.argb(230, 245, 245, 245))
+        elevation = 12f
+
+        val row = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            val padH = dpToPx(12)
+            val padV = dpToPx(10)
+            setPadding(padH, padV, padH, padV)
+        }
+
+        val btnSize = dpToPx(48)
+        val btnMargin = dpToPx(6)
 
         // Color buttons
         for ((i, color) in colors.withIndex()) {
             val btn = ImageButton(context).apply {
-                val displayColor = if (color == Color.WHITE) Color.LTGRAY else color
+                val displayColor = if (color == Color.WHITE) Color.parseColor("#DDDDDD") else color
                 setBackgroundColor(displayColor)
-                val size = 48
-                layoutParams = LayoutParams(size, size).apply { marginEnd = 8 }
+                layoutParams = LinearLayout.LayoutParams(btnSize, btnSize).apply { marginEnd = btnMargin }
                 contentDescription = "${colorNames[i]} pen"
                 setOnClickListener {
                     selectedColorIndex = i
@@ -62,32 +79,42 @@ class ToolbarView @JvmOverloads constructor(
                 }
             }
             colorButtons.add(btn)
-            addView(btn)
+            row.addView(btn)
         }
 
         // Spacer
-        addView(LinearLayout(context).apply { layoutParams = LayoutParams(24, 1) })
+        row.addView(LinearLayout(context).apply {
+            layoutParams = LinearLayout.LayoutParams(dpToPx(16), 1)
+        })
 
         // Thickness buttons
         for ((i, t) in thicknesses.withIndex()) {
             val btn = ImageButton(context).apply {
-                layoutParams = LayoutParams(48, 48).apply { marginEnd = 8 }
-                setBackgroundColor(Color.DKGRAY)
-                scaleX = t / thicknesses.last()
-                scaleY = t / thicknesses.last()
+                layoutParams = LinearLayout.LayoutParams(btnSize, btnSize).apply { marginEnd = btnMargin }
+                setBackgroundColor(Color.parseColor("#444444"))
+                scaleY = (t / thicknesses.last()).coerceIn(0.3f, 1.0f)
                 contentDescription = "${thicknessNames[i]} thickness"
-                setOnClickListener { onThicknessSelected?.invoke(t) }
+                setOnClickListener {
+                    selectedThicknessIndex = i
+                    isErasing = false
+                    onEraserToggled?.invoke(false)
+                    onThicknessSelected?.invoke(t)
+                    updateSelection()
+                }
             }
-            addView(btn)
+            thicknessButtons.add(btn)
+            row.addView(btn)
         }
 
         // Spacer
-        addView(LinearLayout(context).apply { layoutParams = LayoutParams(24, 1) })
+        row.addView(LinearLayout(context).apply {
+            layoutParams = LinearLayout.LayoutParams(dpToPx(16), 1)
+        })
 
         // Eraser
-        val eraserBtn = ImageButton(context).apply {
-            layoutParams = LayoutParams(48, 48).apply { marginEnd = 8 }
-            setBackgroundColor(Color.YELLOW)
+        val eraser = ImageButton(context).apply {
+            layoutParams = LinearLayout.LayoutParams(btnSize, btnSize).apply { marginEnd = btnMargin }
+            setBackgroundColor(Color.parseColor("#FDD835"))
             contentDescription = "Eraser"
             setOnClickListener {
                 isErasing = !isErasing
@@ -95,32 +122,43 @@ class ToolbarView @JvmOverloads constructor(
                 updateSelection()
             }
         }
-        addView(eraserBtn)
+        eraserBtn = eraser
+        row.addView(eraser)
 
         // Undo
-        val undoBtn = ImageButton(context).apply {
-            layoutParams = LayoutParams(48, 48).apply { marginEnd = 8 }
-            setBackgroundColor(Color.LTGRAY)
+        row.addView(ImageButton(context).apply {
+            layoutParams = LinearLayout.LayoutParams(btnSize, btnSize).apply { marginEnd = btnMargin }
+            setBackgroundColor(Color.parseColor("#BDBDBD"))
             contentDescription = "Undo"
             setOnClickListener { onUndoClicked?.invoke() }
-        }
-        addView(undoBtn)
+        })
 
         // Redo
-        val redoBtn = ImageButton(context).apply {
-            layoutParams = LayoutParams(48, 48)
-            setBackgroundColor(Color.LTGRAY)
+        row.addView(ImageButton(context).apply {
+            layoutParams = LinearLayout.LayoutParams(btnSize, btnSize)
+            setBackgroundColor(Color.parseColor("#BDBDBD"))
             contentDescription = "Redo"
             setOnClickListener { onRedoClicked?.invoke() }
-        }
-        addView(redoBtn)
+        })
 
+        addView(row)
         updateSelection()
     }
 
     private fun updateSelection() {
         for ((i, btn) in colorButtons.withIndex()) {
-            btn.alpha = if (i == selectedColorIndex && !isErasing) 1.0f else 0.4f
+            val selected = i == selectedColorIndex && !isErasing
+            btn.alpha = if (selected) 1.0f else 0.45f
+            btn.scaleX = if (selected) 1.15f else 1.0f
+            btn.scaleY = if (selected) 1.15f else 1.0f
         }
+        for ((i, btn) in thicknessButtons.withIndex()) {
+            val selected = i == selectedThicknessIndex && !isErasing
+            btn.alpha = if (selected) 1.0f else 0.45f
+            btn.scaleX = if (selected) 1.15f else 1.0f
+        }
+        eraserBtn?.alpha = if (isErasing) 1.0f else 0.55f
+        eraserBtn?.scaleX = if (isErasing) 1.15f else 1.0f
+        eraserBtn?.scaleY = if (isErasing) 1.15f else 1.0f
     }
 }

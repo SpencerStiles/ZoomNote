@@ -26,7 +26,7 @@ class StrokeRenderer {
             val prev = stroke.points[i - 1]
             val curr = stroke.points[i]
             val avgPressure = (prev.pressure + curr.pressure) / 2f
-            paint.strokeWidth = (stroke.thickness * viewMatrix.scale * (0.5f + avgPressure * 1.5f)).toFloat()
+            paint.strokeWidth = maxOf(stroke.thickness * viewMatrix.scale * (0.5f + avgPressure * 1.5f), 1.0).toFloat()
 
             val prevScreen = viewMatrix.worldToScreen(prev.x, prev.y)
             val currScreen = viewMatrix.worldToScreen(curr.x, curr.y)
@@ -46,7 +46,7 @@ class StrokeRenderer {
             val prev = points[i - 1]
             val curr = points[i]
             val avgPressure = (prev.pressure + curr.pressure) / 2f
-            paint.strokeWidth = (thickness * viewMatrix.scale * (0.5f + avgPressure * 1.5f)).toFloat()
+            paint.strokeWidth = maxOf(thickness * viewMatrix.scale * (0.5f + avgPressure * 1.5f), 1.0).toFloat()
 
             val prevScreen = viewMatrix.worldToScreen(prev.x, prev.y)
             val currScreen = viewMatrix.worldToScreen(curr.x, curr.y)

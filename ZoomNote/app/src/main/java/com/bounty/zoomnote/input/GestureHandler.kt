@@ -25,12 +25,10 @@ class GestureHandler(
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                // Single finger is handled by StylusHandler for drawing — don't claim it
                 fingerCount = 1
-                lastTouchX = event.x.toDouble()
-                lastTouchY = event.y.toDouble()
-                isPanning = true
                 tapStartTime = System.currentTimeMillis()
-                return true
+                return false
             }
             MotionEvent.ACTION_POINTER_DOWN -> {
                 fingerCount = event.pointerCount
@@ -38,28 +36,27 @@ class GestureHandler(
                     isPanning = false
                     isPinching = true
                     lastPinchDist = pinchDistance(event)
+                    lastTouchX = ((event.getX(0) + event.getX(1)) / 2.0)
+                    lastTouchY = ((event.getY(0) + event.getY(1)) / 2.0)
                 }
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
                 if (isPinching && event.pointerCount >= 2) {
                     val dist = pinchDistance(event)
+                    val midX = (event.getX(0) + event.getX(1)) / 2.0
+                    val midY = (event.getY(0) + event.getY(1)) / 2.0
                     if (lastPinchDist > 0) {
                         val factor = dist / lastPinchDist
-                        val midX = (event.getX(0) + event.getX(1)) / 2.0
-                        val midY = (event.getY(0) + event.getY(1)) / 2.0
                         viewMatrix.zoomBy(factor, midX, midY)
-                        onViewChanged()
                     }
-                    lastPinchDist = dist
-                    return true
-                }
-                if (isPanning && fingerCount == 1) {
-                    val dx = event.x.toDouble() - lastTouchX
-                    val dy = event.y.toDouble() - lastTouchY
+                    // Two-finger pan: move midpoint
+                    val dx = midX - lastTouchX
+                    val dy = midY - lastTouchY
                     viewMatrix.pan(dx, dy)
-                    lastTouchX = event.x.toDouble()
-                    lastTouchY = event.y.toDouble()
+                    lastTouchX = midX
+                    lastTouchY = midY
+                    lastPinchDist = dist
                     onViewChanged()
                     return true
                 }

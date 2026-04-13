@@ -5,6 +5,9 @@ import android.view.Gravity
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.bounty.zoomnote.ZoomNoteApp
@@ -23,6 +26,7 @@ class CanvasActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         viewModel = ViewModelProvider(this)[CanvasViewModel::class.java]
 
@@ -69,25 +73,15 @@ class CanvasActivity : AppCompatActivity() {
         toolbar.onRedoClicked = { canvasView.performRedo() }
         root.addView(toolbar, toolbarParams)
 
-        val minimap = MinimapView(this)
-        val minimapSize = 150
-        val minimapParams = FrameLayout.LayoutParams(minimapSize, minimapSize).apply {
-            gravity = Gravity.TOP or Gravity.END
-            topMargin = 32
-            marginEnd = 32
-        }
-        minimap.onNavigate = { wx, wy ->
-            val screenCenterX = canvasView.width / 2.0
-            val screenCenterY = canvasView.height / 2.0
-            val (currentCenterX, currentCenterY) = canvasView.viewMatrix.screenToWorld(screenCenterX, screenCenterY)
-            val dx = (wx - currentCenterX) * canvasView.viewMatrix.scale
-            val dy = (wy - currentCenterY) * canvasView.viewMatrix.scale
-            canvasView.viewMatrix.pan(-dx, -dy)
-            canvasView.requestRender()
-        }
-        root.addView(minimap, minimapParams)
-
         setContentView(root)
+
+        // Push toolbar inside system bars
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            toolbarParams.bottomMargin = 32 + bars.bottom
+            toolbar.layoutParams = toolbarParams
+            insets
+        }
 
         // Load strokes — use ViewModel cache on rotation
         if (viewModel.strokesLoaded) {

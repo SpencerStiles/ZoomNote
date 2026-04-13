@@ -9,13 +9,23 @@ class StylusHandler(
     private val onStrokeStarted: () -> Unit,
     private val onPointAdded: (Point) -> Unit,
     private val onStrokeFinished: () -> Unit,
+    private val onStrokeCancelled: () -> Unit = {},
     private val onSPenButtonUndo: (() -> Unit)? = null
 ) {
     private var isDrawing = false
     private var spenButtonHandled = false
 
     fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.getToolType(0) != MotionEvent.TOOL_TYPE_STYLUS) return false
+        val toolType = event.getToolType(0)
+        if (toolType != MotionEvent.TOOL_TYPE_STYLUS && toolType != MotionEvent.TOOL_TYPE_FINGER) return false
+        // Only handle single-touch drawing; let multi-touch fall through to GestureHandler
+        if (event.pointerCount > 1) {
+            if (isDrawing) {
+                isDrawing = false
+                onStrokeCancelled() // discard, don't save
+            }
+            return false
+        }
 
         // S Pen primary button → undo (button pressed without drawing)
         val buttonPressed = event.buttonState and MotionEvent.BUTTON_STYLUS_PRIMARY != 0

@@ -75,6 +75,7 @@ class ZoomCanvasView @JvmOverloads constructor(
             requestRender()
         },
         onStrokeFinished = { finalizeStroke() },
+        onStrokeCancelled = { stateLock.withLock { activePoints.clear() }; requestRender() },
         onSPenButtonUndo = { undo() }
     )
 
