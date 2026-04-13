@@ -18,6 +18,7 @@ class GestureHandler(
     private var fingerCount = 0
     private var tapStartTime = 0L
     private val tapTimeout = 300L
+    private var tapActionFired = false
 
     fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS) return false
@@ -66,9 +67,14 @@ class GestureHandler(
             }
             MotionEvent.ACTION_POINTER_UP -> {
                 val elapsed = System.currentTimeMillis() - tapStartTime
-                if (elapsed < tapTimeout) {
-                    if (fingerCount == 2) onUndo()
-                    else if (fingerCount == 3) onRedo()
+                if (elapsed < tapTimeout && !tapActionFired) {
+                    if (fingerCount == 2) {
+                        tapActionFired = true
+                        onUndo()
+                    } else if (fingerCount == 3) {
+                        tapActionFired = true
+                        onRedo()
+                    }
                 }
                 fingerCount = event.pointerCount - 1
                 if (fingerCount < 2) {
@@ -81,6 +87,7 @@ class GestureHandler(
                 isPanning = false
                 isPinching = false
                 fingerCount = 0
+                tapActionFired = false
                 return true
             }
         }

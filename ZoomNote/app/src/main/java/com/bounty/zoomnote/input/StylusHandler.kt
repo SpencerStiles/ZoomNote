@@ -12,15 +12,21 @@ class StylusHandler(
     private val onSPenButtonUndo: (() -> Unit)? = null
 ) {
     private var isDrawing = false
+    private var spenButtonHandled = false
 
     fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.getToolType(0) != MotionEvent.TOOL_TYPE_STYLUS) return false
 
         // S Pen primary button → undo (button pressed without drawing)
-        if (event.buttonState and MotionEvent.BUTTON_STYLUS_PRIMARY != 0) {
-            onSPenButtonUndo?.invoke()
+        val buttonPressed = event.buttonState and MotionEvent.BUTTON_STYLUS_PRIMARY != 0
+        if (buttonPressed) {
+            if (!spenButtonHandled) {
+                spenButtonHandled = true
+                onSPenButtonUndo?.invoke()
+            }
             return true
         }
+        spenButtonHandled = false
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
