@@ -62,7 +62,7 @@ class ZoomCanvasView @JvmOverloads constructor(
 
     // Hit test radius for eraser: 20dp
     private val eraserRadiusDp = TypedValue.applyDimension(
-        TypedValue.COMPLEX_UNIT_DIP, 20f, context.resources.displayMetrics
+        TypedValue.COMPLEX_UNIT_DIP, 40f, context.resources.displayMetrics
     ).toDouble()
 
     private val stylusHandler = StylusHandler(
@@ -110,12 +110,14 @@ class ZoomCanvasView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (eraserMode && event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS) {
-            if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-                handleEraserTap(event.x.toDouble(), event.y.toDouble())
-                return true
+        if (eraserMode && event.pointerCount == 1) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                    handleEraserTap(event.x.toDouble(), event.y.toDouble())
+                    return true
+                }
+                MotionEvent.ACTION_UP -> return true
             }
-            return true
         }
         if (stylusHandler.onTouchEvent(event)) return true
         if (gestureHandler.onTouchEvent(event)) return true
